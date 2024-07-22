@@ -1,0 +1,63 @@
+// projection.osl
+
+shader projection(
+    point position = vector(0.0, 0.0, 0.0),
+    vector shading_normal = vector(0.0, 0.0, 0.0),
+    point camera_position = vector(0.0, 0.0, 0.0),
+    vector camera_rotation = vector(0.0, 0.0, 0.0),
+    float fov = 0.0,
+    int resolution_x = 0,
+    int resolution_y = 0,
+    output vector texture_coordinate = vector(0.0, 0.0, 0.0),
+    output float is_visible = 0.0
+    )
+{
+    point pos = camera_position;
+
+    vector look = vector(0.0, 0.0, -1.0);
+    look = (vector) rotate((point)look, camera_rotation.x, vector(1.0, 0.0, 0.0));
+    look = (vector) rotate((point)look, camera_rotation.y, vector(0.0, 1.0, 0.0));
+    look = (vector) rotate((point)look, camera_rotation.z, vector(0.0, 0.0, 1.0));
+    
+    vector up = vector(0.0, 1.0, 0.0);
+    up = (vector) rotate((point)up, camera_rotation.x, vector(1.0, 0.0, 0.0));
+    up = (vector) rotate((point)up, camera_rotation.y, vector(0.0, 1.0, 0.0));
+    up = (vector) rotate((point)up, camera_rotation.z, vector(0.0, 0.0, 1.0));
+    
+    vector right = normalize(cross(look, up));
+    
+    matrix cameraToWorld = transpose(matrix(right.x, up.x, look.x, pos.x,
+                                            right.y, up.y, look.y, pos.y,
+                                            right.z, up.z, look.z, pos.z,
+                                                0.0,  0.0,    0.0,   1.0));
+    
+    matrix worldToCamera = 1 / cameraToWorld;
+    
+    vector p = transform(worldToCamera, position);
+    if (p.z <= 0.0)
+    {
+        is_visible = 0.0;
+    }
+    else
+    {
+        p /= p.z;
+        
+        float invTanHalfFov = 1.0 / tan(fov * 0.5);
+        p.x *= invTanHalfFov;
+        p.y *= invTanHalfFov * resolution_x / resolution_y;
+        p.x = p.x * 0.5 + 0.5;
+        p.y = p.y * 0.5 + 0.5;
+        
+        if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0)
+        {
+            is_visible = 0.0;
+        }
+        else
+        {
+            p.x = floor(p.x * resolution_x) / resolution_x;
+            p.y = floor(p.y * resolution_y) / resolution_y;
+            texture_coordinate = vector(p.x, p.y, 0.0);
+            is_visible = 1.0 - (float) trace(position, normalize(camera_position - position), "maxdist", distance(camera_position, position));
+        }
+    }
+}
