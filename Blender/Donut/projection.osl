@@ -8,7 +8,9 @@ shader projection(
     float fov = 0.0,
     int resolution_x = 0,
     int resolution_y = 0,
+    float grid_width = 0.01,
     output vector texture_coordinate = vector(0.0, 0.0, 0.0),
+    output float pixel_grid = 0.0,
     output float is_visible = 0.0
     )
 {
@@ -54,10 +56,14 @@ shader projection(
         }
         else
         {
+            pixel_grid = abs(p.x * resolution_x - round(p.x * resolution_x)) < grid_width || abs(p.y * resolution_y - round(p.y * resolution_y)) < grid_width ? 1.0 : 0.0;
+            
             p.x = floor(p.x * resolution_x) / resolution_x;
             p.y = floor(p.y * resolution_y) / resolution_y;
+            
             texture_coordinate = vector(p.x, p.y, 0.0);
-            is_visible = 1.0 - (float) trace(position, normalize(camera_position - position), "maxdist", distance(camera_position, position));
+            
+            is_visible = 1.0 - (float) trace(position, normalize(camera_position - position), "maxdist", distance(camera_position, position) - 1.5);
         }
     }
 }
